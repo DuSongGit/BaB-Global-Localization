@@ -1,0 +1,7 @@
+image: aces_karto_0.05.pgm
+resolution: 0.050000
+origin: [-47.397581, -30.426643, 0.000000]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.196
+
