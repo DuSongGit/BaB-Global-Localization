@@ -17,4 +17,4 @@ Use: run "bab_global_localization" by specifying the dataset path.
 
 Video
 -------
-	https://github.com/DuSongGit/BaB-Global-Localization/issues/1#issue-2754177207
+https://github.com/DuSongGit/BaB-Global-Localization/issues/1#issue-2754177207
