@@ -9,7 +9,6 @@
 #include <queue>
 #include <stdint.h>
 
-//参考：https://blog.csdn.net/longtype/article/details/86589512
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -25,7 +24,6 @@ extern "C" {
 // Test to see if the given map coords lie within the absolute map bounds.
 #define MAP_VALID(map, i, j) ((i >= 0) && (i < map->size_x) && (j >= 0) && (j < map->size_y))
 
-//定义一些全局变量
 double z_hit_denominator;
 bool use_likelihood_model_exclude_unknown = false;
 
@@ -36,7 +34,6 @@ typedef struct
   int occ_state;
   // Distance to the nearest occupied cell[m]
   double occ_dist;
-  // 该栅格的评分，提前计算好，在csm中直接查表相加就行
   float score;
 } map_cell_t;
 
@@ -53,7 +50,6 @@ typedef struct
   map_cell_t *cells;
   // Max distance at which we care about obstacles, for constructing likelihood field
   double max_occ_dist;
-  // 最小得分，用于超出地图范围的激光点的评分
   float min_score;
 } map_t;
 
@@ -120,10 +116,8 @@ class CachedDistanceMap
     int cell_radius_;
 };
 
-//自定义优先级，优先级队列默认大顶堆（这里“大顶堆”是指优先级高的位于顶部，即队列前面，不是occ_dist大的位于顶部），元素按occ_dist升序排列
 bool operator<(const CellData& a, const CellData& b)
 {
-  //返回true说明“a的优先级小于b”，因为这里重载的是“<”符号，所以b应该位于顶部，即occ_dist升序排列
   return a.map_->cells[MAP_INDEX(a.map_, a.i_, a.j_)].occ_dist > a.map_->cells[MAP_INDEX(b.map_, b.i_, b.j_)].occ_dist;
 }
 
@@ -140,11 +134,8 @@ get_distance_map(double scale, double max_dist)
   }
   return cdm;
 }
-//根据距离计算栅格的评分，以后可以在这里修改不同的评分规则
 float scoreCell(double dist, double max_dist){
   double p1 = exp(-(dist * dist)/z_hit_denominator);
-  // double p2 = 1.0 - dist/max_dist;
-  // double p3 = 1.0 - dist*dist/max_dist/max_dist;
   return p1;
 }
 
@@ -199,11 +190,6 @@ void map_update_cspace(map_t *map, double max_occ_dist, double laser_standard_de
 
   marked = new unsigned char[map->size_x*map->size_y];
   memset(marked, 0, sizeof(unsigned char) * map->size_x*map->size_y);
-  //memset：作用是在一段内存块中填充某个给定的值，它是对较大的结构体或数组进行清零操作的一种最快方法;
-  //void *memset(void *s, int c, unsigned long n);
-  //将指针变量 s 所指向的前 n 字节的内存单元用一个“整数” c 替换并返回s。注意 c 是 int 型，
-  //s 是 void* 型的指针变量，所以它可以为任何类型的数据进行初始化。
-
   map->max_occ_dist = max_occ_dist;
 
   CachedDistanceMap* cdm = get_distance_map(map->scale, map->max_occ_dist);

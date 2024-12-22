@@ -85,9 +85,7 @@ class PrecomputationGrid2D {
 
   //根据原始分辨率下的栅格索引获取当前分辨率预算图下的栅格得分
   float GetValue(const Eigen::Array2i& xy_index) const { 
-    const Eigen::Array2i local_xy_index = xy_index - offset_; 
-    //负数转为unsigned类型会输出计算机所能表示的最大正整数，参考：https://www.cnblogs.com/foremember/p/10472515.html
-    //这两个if里的条件实际代表了四个条件：xy_index.x() < offset_.x() || xy_index.y() < offset_.y() || local_xy_index.x() >= size_x || local_xy_index.y() >= size_y
+    const Eigen::Array2i local_xy_index = xy_index - offset_;
     if (static_cast<unsigned>(local_xy_index.x()) >= static_cast<unsigned>(size_x) || static_cast<unsigned>(local_xy_index.y()) >= static_cast<unsigned>(size_y)){
         return 0;
     } 
@@ -99,7 +97,6 @@ class PrecomputationGrid2D {
   int size_x, size_y;
 
   //当前分辨率预算图下的各栅格得分
-  //cartographer用的uint8类型，应该是为了节省内存，但这样会不会损失精度？-2022.4.18
   float* cells_;
 };
 
@@ -221,8 +218,6 @@ public:
         cloudOut->resize(cloudSize);
         float cosx = cos(curr_heading);
         float sinx = sin(curr_heading);
-        //这里不用多线程了，因为一帧激光数据的点数比较少，频繁启动线程会带来额外的开销，因为线程需要被创建和销毁
-        //#pragma omp parallel for num_threads(numberOfCores)
         for (int i = 0; i < cloudSize; ++i)
         {
             const auto &pointFrom = cloudIn->points[i];
@@ -235,7 +230,6 @@ public:
 
     vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> generateRotatedScans(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud){
         vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> rotated_scans;
-        //reserve只分配内存，不创建对象
         rotated_scans.reserve(rotated_num);
         float delta_theta = -M_PI;
         for(int i = 0; i < rotated_num; i++){
@@ -251,7 +245,6 @@ public:
         vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> rotated_scans = generateRotatedScans(cloudInBaseFrame);
         //将旋转后的点云集合加入初值平移量转换到地图坐标下，并将各个激光点坐标转换成栅格索引
         const vector<DiscreteScan2D> discrete_scans = DiscretizeScans(rotated_scans);
-        //用局部变量访问速度更快，参考：https://www.w3cschool.cn/article/37805725.html
         vector<Candidate> tem(lowest_resolution_candidates.begin(), lowest_resolution_candidates.end());
         ScoreCandidates(discrete_scans, &tem, bab_max_depth-1);
         //按评分从大到小排序
@@ -281,7 +274,6 @@ public:
       vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> rotated_scans = generateRotatedScans(cloudInBaseFrame);
       //将旋转后的点云集合加入初值平移量转换到地图坐标下，并将各个激光点坐标转换成栅格索引
       const vector<DiscreteScan2D> discrete_scans = DiscretizeScans(rotated_scans);
-      //用局部变量访问速度更快，参考：https://www.w3cschool.cn/article/37805725.html
       vector<Candidate> tem(lowest_resolution_candidates.begin(), lowest_resolution_candidates.end());
       ScoreCandidates(discrete_scans, &tem, bab_max_depth-1); 
       priority_queue<Candidate> candidates_queue;
@@ -343,7 +335,6 @@ public:
       vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> rotated_scans = generateRotatedScans(cloudInBaseFrame);
       //将旋转后的点云集合加入初值平移量转换到地图坐标下，并将各个激光点坐标转换成栅格索引
       const vector<DiscreteScan2D> discrete_scans = DiscretizeScans(rotated_scans);
-      //用局部变量访问速度更快，参考：https://www.w3cschool.cn/article/37805725.html
       vector<Candidate> tem(lowest_resolution_candidates.begin(), lowest_resolution_candidates.end());
       ScoreCandidates(discrete_scans, &tem, bab_max_depth-1);
       priority_queue<Candidate> highest_contour;
@@ -358,7 +349,6 @@ public:
         best_solution = {initial_x, initial_y, 0};
         return;
       }
-      //
       //叶子节点的评分不能低于该值
       float best_solution_socre = best_solution_lowest_socre;
       Candidate best_candidate;
@@ -443,18 +433,14 @@ public:
             int mi = MAP_GXWX(map_, this_x);
             int mj = MAP_GYWY(map_, this_y);
             discrete_scans.back().emplace_back(mi, mj);
-            //这里不要直接把宏定义函数写到emplace_back中，如下面的写法，这样y方向的数值会出错，目前不清楚为什么会出错。-2022.4.6
-            //discrete_scans.back().emplace_back(MAP_GXWX(map_, this_x), MAP_GXWX(map_, this_y));
           }
       }
-      //ROS_INFO("Invalid scan points number is:%d, all scan points number is:%d",count, cloudSize*int(scans.size()));
       return discrete_scans;
   }
 
   void GenerateLowestResolutionCandidates(){
     //步长
     const int linear_step_size = 1 << (bab_max_depth - 1);
-    //保证至少有一个候选解，因为在位姿跟踪中搜索窗口较小，如果多分辨率地图层数太多，有可能低分辨率栅格步长大于搜索窗口
     const int num_lowest_resolution_linear_x_candidates = (x_linear_search_bound*2 + linear_step_size) / linear_step_size;
     const int num_lowest_resolution_linear_y_candidates = (y_linear_search_bound*2 + linear_step_size) / linear_step_size;
     int num_candidates = num_lowest_resolution_linear_x_candidates*num_lowest_resolution_linear_y_candidates*rotated_num;
@@ -500,8 +486,6 @@ public:
       }
     }
     else{
-      //除了最高层，其他层不再使用openmp，因为调用一次最多也就4个子节点，频繁启动线程会带来额外的开销，因为线程需要被创建和销毁
-      //#pragma omp parallel for num_threads(numberOfCores)
       for (int i = 0; i < int(candidates->size()); i++){
           Candidate& candidate = (*candidates)[i];
           float sum = 0;
@@ -518,17 +502,13 @@ public:
   Candidate BranchAndBound(const vector<DiscreteScan2D>& discrete_scans, vector<Candidate>& candidates, int candidate_depth, float min_score){
     //递归终止条件
     if (candidate_depth == 0) {
-      // 返回最优候选解
       return *candidates.begin();
     }
-    //创建一个临时的候选解对象best_high_resolution_candidate，为之赋予最小的评分
     Candidate best_high_resolution_candidate(0,0,0,0);
     for (int k = 0; k < int(candidates.size()); k++) {
-      //如果遇到一个候选解的评分很低，意味着以后的候选解中也没有合适的解（因为candidate按score降序排列），直接跳出循环（剪枝）
       if (candidates[k].score <= min_score) {
         break;
       }
-      //如果for循环能够继续运行，说明当前候选解是一个更优的选择，需要对其进行分支。新生成的候选点将被保存在容器higher_resolution_candidates中。
       vector<Candidate> higher_resolution_candidates;
       //分支后的步长
       const int half_width = 1 << (candidate_depth - 1);
@@ -543,20 +523,11 @@ public:
           higher_resolution_candidates.emplace_back(candidates[k].scan_index, candidates[k].x_index_offset + x_offset, candidates[k].y_index_offset + y_offset, candidate_depth-1);
         }
       }
-      //调用函数ScoreCandidates对新分支的候选解评分并排序，并递归调用BranchAndBound对新分支的
-      //higher_resolution_candidates进行搜索。 这样就可以实现深度优先的搜索，先一直沿着最有可能的分支向下搜索，
-      //直到找到一个解。并将该解作为目前的最优解保存在best_high_resolution_candidate中。 
-      //以后通过递归调用发现了更优的解都将通过std::max函数来更新已知的最优解。
-      
       ScoreCandidates(discrete_scans, &higher_resolution_candidates, candidate_depth-1);
       sort(higher_resolution_candidates.begin(), higher_resolution_candidates.end(), std::greater<Candidate>());
-
-      //vector<Candidate> actual_higher_resolution_candidates = {higher_resolution_candidates[0]};
-      
       best_high_resolution_candidate = std::max(best_high_resolution_candidate,
                                                 BranchAndBound(discrete_scans, higher_resolution_candidates, candidate_depth - 1, best_high_resolution_candidate.score));
     }
-    //当遍历完所有的候选点之后，对象best_high_resolution_candidate中就记录了最优的解，返回。
     return best_high_resolution_candidate;
   }
 

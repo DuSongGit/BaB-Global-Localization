@@ -184,7 +184,6 @@ int main(int argc, char** argv)
         std::cout << "Please specify the dataset path!" << std::endl;
         return 1;
     }
-    //这里要转换一下，不能直接用argv[1]去和map.pcd相加
     string path = argv[1];
     //加载地图
     loadMap(path);
@@ -250,7 +249,6 @@ int main(int argc, char** argv)
     for(; scan_index < totol_number; scan_index += step){
         pcl::PointCloud<pcl::PointXYZ>::Ptr scan_pointcloud(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::io::loadPCDFile(path+"scans/full"+to_string(scan_index) + ".pcd", *scan_pointcloud);
-        //全局搜索
         if(use_voxel_filter){
             printf("Size of original scan points: %d\n", int(scan_pointcloud->size()));
             downSampleScan.setInputCloud(scan_pointcloud);
