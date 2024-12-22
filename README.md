@@ -1,5 +1,5 @@
 # BaB-Global-Localization
-Efficient  Global Localization Method Using Branch-and-Bound
+Efficient  global localization method using branch and bound based on occupancy grid map and 2D-LiDAR
 
 System: Ubuntu 20.04
 
